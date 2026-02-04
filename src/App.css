@@ -598,6 +598,105 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
+/* Experimental Laboratory */
+.experiments-panel {
+  grid-column: 1 / -1;
+  padding: 1.5rem;
+  margin-top: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
+.lab-icon {
+  font-size: 1.5rem;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.experiments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.exp-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.exp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.exp-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--accent-color);
+}
+
+.exp-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.mini-select {
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: white;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.naming-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.naming-inputs input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  color: white;
+  font-size: 0.8rem;
+  width: 100px;
+}
+
+.filename-placeholder {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  opacity: 0.5;
+}
+
+.pot-warning {
+  color: #f59e0b;
+  margin-left: 0.5rem;
+  cursor: help;
+  display: flex;
+  align-items: center;
+}
+
+.opacity-50 {
+  opacity: 0.5;
+}
+
 .footer {
   text-align: center;
   margin-top: auto;

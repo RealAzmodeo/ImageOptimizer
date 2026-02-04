@@ -14,9 +14,13 @@ function App() {
     resizeValue: 100,
     quality: 70, // Default optimal
     compressionLevel: 'optimal',
-    preserveStructure: true,
     unityReady: true,
-    enforcePOT: false
+    enforcePOT: false,
+    smartCrop: false,
+    outputFormat: 'original',
+    maskMode: false,
+    namePrefix: '',
+    nameSuffix: ''
   })
   const [isProcessing, setIsProcessing] = useState(false)
   const [selectedForComparison, setSelectedForComparison] = useState<ImageFile | null>(null) // Renamed from selectedFile

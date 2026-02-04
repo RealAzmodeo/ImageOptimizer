@@ -1,12 +1,18 @@
 export interface OptimizationOptions {
-    profile: 'ui' | 'sprites' | 'background' | 'extreme' | 'custom';
-    resizeMode: 'percentage' | 'width' | 'height';
+    profile: 'sprites' | 'ui' | 'background' | 'extreme' | 'custom';
+    resizeMode: 'percentage' | 'fixed';
     resizeValue: number;
     quality: number; // 0-100
     compressionLevel: 'very_low' | 'low' | 'optimal' | 'high' | 'very_high';
     preserveStructure: boolean;
     unityReady: boolean;
     enforcePOT: boolean;
+    // Experimental Features
+    smartCrop: boolean;
+    outputFormat: 'original' | 'webp';
+    maskMode: boolean;
+    namePrefix: string;
+    nameSuffix: string;
 }
 
 export interface ImageFile {

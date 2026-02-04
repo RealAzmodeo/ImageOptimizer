@@ -27,6 +27,7 @@ function App() {
     nameSuffix: ''
   })
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isLabExpanded, setIsLabExpanded] = useState(false)
   const [selectedForComparison, setSelectedForComparison] = useState<ImageFile | null>(null) // Renamed from selectedFile
 
   const optimizationManager = useRef(new OptimizationManager((id, updates) => { // Changed to useRef
@@ -366,163 +367,169 @@ function App() {
           </div>
         </div>
 
-        <div className="experiments-panel glass-panel fade-in">
-          <div className="panel-header">
+        <div className={`experiments-panel glass-panel fade-in ${isLabExpanded ? 'expanded' : 'collapsed'}`}>
+          <div
+            className="panel-header"
+            onClick={() => setIsLabExpanded(!isLabExpanded)}
+            style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', width: '100%' }}
+          >
             <div className="lab-icon">🧪</div>
-            <h2>Experimental Laboratory</h2>
+            <h2 style={{ flex: 1 }}>Experimental Laboratory</h2>
             <div className="badge experimental">BETA FEATURES</div>
+            <div className="expand-indicator" style={{ marginLeft: '1rem', fontSize: '1.2rem', fontWeight: 'bold' }}>
+              {isLabExpanded ? '−' : '+'}
+            </div>
           </div>
 
-          <div className="experiments-grid">
-            {/* 1. Smart Crop */}
-            <div className="exp-item" title="Detects the actual content and removes transparency borders. Saves memory in Unity.">
-              <div className="exp-info">
-                <div className="title-row">
-                  <span className="exp-title">Smart Crop (Auto-Trim)</span>
-                  <div className="info-icon">i</div>
+          {isLabExpanded && (
+            <div className="experiments-grid">
+              {/* Row 1: Feature Toggles (3 Columns) */}
+              <div className="exp-item" title="Detects the actual content and removes transparency borders. Saves memory in Unity.">
+                <div className="exp-info">
+                  <div className="title-row">
+                    <span className="exp-title">Smart Crop (Auto-Trim)</span>
+                    <div className="info-icon">i</div>
+                  </div>
+                  <span className="exp-desc">Remove empty transparency space</span>
                 </div>
-                <span className="exp-desc">Remove empty transparent space from sprites</span>
+                <input
+                  type="checkbox"
+                  className="toggle-switch"
+                  checked={options.smartCrop}
+                  onChange={(e) => setOptions(prev => ({ ...prev, smartCrop: e.target.checked }))}
+                />
               </div>
-              <input
-                type="checkbox"
-                className="toggle-switch"
-                checked={options.smartCrop}
-                onChange={(e) => setOptions(prev => ({ ...prev, smartCrop: e.target.checked }))}
-              />
-            </div>
 
-            {/* 2. Mask Mode */}
-            <div className="exp-item" title="Converts to high-precision grayscale. Perfect for Roughness, Metallic, or Opacity maps.">
-              <div className="exp-info">
-                <div className="title-row">
-                  <span className="exp-title">Mask Mode (Grayscale)</span>
-                  <div className="info-icon">i</div>
+              <div className="exp-item" title="Converts to high-precision grayscale. Perfect for Roughness, Metallic, or Opacity maps.">
+                <div className="exp-info">
+                  <div className="title-row">
+                    <span className="exp-title">Mask Mode (Grayscale)</span>
+                    <div className="info-icon">i</div>
+                  </div>
+                  <span className="exp-desc">Unity mask map optimization</span>
                 </div>
-                <span className="exp-desc">Optimize for Unity mask maps (Roughness, etc.)</span>
+                <input
+                  type="checkbox"
+                  className="toggle-switch"
+                  checked={options.maskMode}
+                  onChange={(e) => setOptions(prev => ({ ...prev, maskMode: e.target.checked }))}
+                />
               </div>
-              <input
-                type="checkbox"
-                className="toggle-switch"
-                checked={options.maskMode}
-                onChange={(e) => setOptions(prev => ({ ...prev, maskMode: e.target.checked }))}
-              />
-            </div>
 
-            {/* 3. Smart Padding */}
-            <div className="exp-item" title="Repeats the last valid edge pixels to fill gaps instead of transparency. Fixes GPU filtering 'bleeding' lines.">
-              <div className="exp-info">
-                <div className="title-row">
-                  <span className="exp-title">Smart Padding (Dilatation)</span>
-                  <div className="info-icon">i</div>
+              <div className="exp-item" title="Repeats the last valid edge pixels to fill gaps instead of transparency. Fixes GPU filtering 'bleeding' lines.">
+                <div className="exp-info">
+                  <div className="title-row">
+                    <span className="exp-title">Smart Padding (Dilatation)</span>
+                    <div className="info-icon">i</div>
+                  </div>
+                  <span className="exp-desc">Edge pixel extrapolation</span>
                 </div>
-                <span className="exp-desc">Extrapolate edge pixels to fill empty margins</span>
+                <input
+                  type="checkbox"
+                  className="toggle-switch"
+                  checked={options.smartPadding}
+                  onChange={(e) => setOptions(prev => ({ ...prev, smartPadding: e.target.checked }))}
+                />
               </div>
-              <input
-                type="checkbox"
-                className="toggle-switch"
-                checked={options.smartPadding}
-                onChange={(e) => setOptions(prev => ({ ...prev, smartPadding: e.target.checked }))}
-              />
-            </div>
 
-            {/* 4. WebP Magic */}
-            <div className="exp-item" title="Converts images to Google's WebP format. Usually 30-50% smaller than PNG at same quality.">
-              <div className="exp-info">
-                <div className="title-row">
-                  <span className="exp-title">WebP Magic</span>
-                  <div className="info-icon">i</div>
+              {/* Row 2: Settings (2 Columns) */}
+              <div className="exp-item" title="Converts images to Google's WebP format. Usually 30-50% smaller than PNG at same quality.">
+                <div className="exp-info">
+                  <div className="title-row">
+                    <span className="exp-title">WebP Magic</span>
+                    <div className="info-icon">i</div>
+                  </div>
+                  <span className="exp-desc">Heavy .webp compression</span>
                 </div>
-                <span className="exp-desc">Heavy compression export to .webp format</span>
+                <select
+                  className="mini-select"
+                  value={options.outputFormat}
+                  onChange={(e) => setOptions(prev => ({ ...prev, outputFormat: e.target.value as any }))}
+                >
+                  <option value="original">Keep Original (PNG/JPG)</option>
+                  <option value="webp">Convert to WebP</option>
+                </select>
               </div>
-              <select
-                className="mini-select"
-                value={options.outputFormat}
-                onChange={(e) => setOptions(prev => ({ ...prev, outputFormat: e.target.value as any }))}
-              >
-                <option value="original">Keep Original (PNG/JPG)</option>
-                <option value="webp">Convert to WebP</option>
-              </select>
-            </div>
 
-            {/* 5. Advanced POT Control */}
-            <div className="exp-item full-width-exp">
-              <div className="exp-info">
-                <div className="title-row">
-                  <span className="exp-title">Advanced POT Controller</span>
-                  <div className="info-icon" title="Force images to specific Unity scale modes. Critical for GPU compression (ASTC/DXT).">i</div>
-                </div>
-                <div className="pot-lab-controls">
-                  <div className="pot-control-group">
-                    <span className="mini-label">Enable POT:</span>
+              <div className="exp-item naming">
+                <div className="exp-info">
+                  <span className="exp-title">Batch Naming Rules</span>
+                  <div className="naming-inputs">
                     <input
-                      type="checkbox"
-                      className="toggle-switch"
-                      checked={options.enforcePOT}
-                      onChange={(e) => setOptions(prev => ({ ...prev, enforcePOT: e.target.checked }))}
+                      type="text"
+                      placeholder="Prefix"
+                      value={options.namePrefix}
+                      onChange={(e) => setOptions(prev => ({ ...prev, namePrefix: e.target.value }))}
+                    />
+                    <div className="filename-placeholder">filename</div>
+                    <input
+                      type="text"
+                      placeholder="Suffix"
+                      value={options.nameSuffix}
+                      onChange={(e) => setOptions(prev => ({ ...prev, nameSuffix: e.target.value }))}
                     />
                   </div>
-                  {options.enforcePOT && (
-                    <>
-                      <div className="pot-control-group">
-                        <span className="mini-label">Target Size:</span>
-                        <select
-                          className="mini-select"
-                          value={options.potSize}
-                          onChange={(e) => setOptions(prev => ({ ...prev, potSize: e.target.value as any }))}
-                        >
-                          <option value="auto">Auto (Nearest Power)</option>
-                          <option value="16">16x16</option>
-                          <option value="32">32x32</option>
-                          <option value="64">64x64</option>
-                          <option value="128">128x128</option>
-                          <option value="256">256x256</option>
-                          <option value="512">512x512</option>
-                          <option value="1024">1024x1024</option>
-                          <option value="2048">2048x2048</option>
-                          <option value="4096">4096x4096</option>
-                        </select>
-                      </div>
-                      <div className="pot-control-group">
-                        <span className="mini-label">Mode:</span>
-                        <select
-                          className="mini-select"
-                          value={options.potMode}
-                          onChange={(e) => setOptions(prev => ({ ...prev, potMode: e.target.value as any }))}
-                        >
-                          <option value="pad">Padding (Contain)</option>
-                          <option value="stretch">Stretching (Distort)</option>
-                          <option value="crop">Cropping (Cut edges)</option>
-                          <option value="fit">Force Scale (Resizing)</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
                 </div>
               </div>
-            </div>
 
-            {/* 6. Batch Naming */}
-            <div className="exp-item naming full-width-exp">
-              <div className="exp-info">
-                <span className="exp-title">Batch Naming Rules</span>
-                <div className="naming-inputs">
-                  <input
-                    type="text"
-                    placeholder="Prefix (e.g. Opt_)"
-                    value={options.namePrefix}
-                    onChange={(e) => setOptions(prev => ({ ...prev, namePrefix: e.target.value }))}
-                  />
-                  <div className="filename-placeholder">filename</div>
-                  <input
-                    type="text"
-                    placeholder="Suffix (e.g. _low)"
-                    value={options.nameSuffix}
-                    onChange={(e) => setOptions(prev => ({ ...prev, nameSuffix: e.target.value }))}
-                  />
+              {/* Row 3: Advanced Controller (Full Width) */}
+              <div className="exp-item full-width-exp">
+                <div className="exp-info">
+                  <div className="title-row">
+                    <span className="exp-title">Advanced POT Controller</span>
+                    <div className="info-icon" title="Force specific scale modes. Critical for GPU compression (ASTC/DXT).">i</div>
+                  </div>
+                  <div className="pot-lab-controls">
+                    <div className="pot-control-group">
+                      <span className="mini-label">Enable POT:</span>
+                      <input
+                        type="checkbox"
+                        className="toggle-switch"
+                        checked={options.enforcePOT}
+                        onChange={(e) => setOptions(prev => ({ ...prev, enforcePOT: e.target.checked }))}
+                      />
+                    </div>
+                    {options.enforcePOT && (
+                      <>
+                        <div className="pot-control-group">
+                          <span className="mini-label">Target Size:</span>
+                          <select
+                            className="mini-select"
+                            value={options.potSize}
+                            onChange={(e) => setOptions(prev => ({ ...prev, potSize: e.target.value as any }))}
+                          >
+                            <option value="auto">Auto (Nearest Power)</option>
+                            <option value="16">16x16</option>
+                            <option value="32">32x32</option>
+                            <option value="64">64x64</option>
+                            <option value="128">128x128</option>
+                            <option value="256">256x256</option>
+                            <option value="512">512x512</option>
+                            <option value="1024">1024x1024</option>
+                            <option value="2048">2048x2048</option>
+                            <option value="4096">4096x4096</option>
+                          </select>
+                        </div>
+                        <div className="pot-control-group">
+                          <span className="mini-label">Mode:</span>
+                          <select
+                            className="mini-select"
+                            value={options.potMode}
+                            onChange={(e) => setOptions(prev => ({ ...prev, potMode: e.target.value as any }))}
+                          >
+                            <option value="pad">Padding (Contain)</option>
+                            <option value="stretch">Stretching (Distort)</option>
+                            <option value="crop">Cropping (Cut edges)</option>
+                            <option value="fit">Force Scale (Resizing)</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {files.length > 0 && (

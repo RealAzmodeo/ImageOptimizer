@@ -607,6 +607,12 @@
   background: linear-gradient(135deg, rgba(88, 166, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
   position: relative;
   overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.experiments-panel.collapsed {
+  padding-bottom: 0.5rem;
+  padding-top: 0.5rem;
 }
 
 .experiments-panel::before {
@@ -728,12 +734,25 @@
 
 .mini-select {
   padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   color: white;
   font-size: 0.8rem;
   outline: none;
+  cursor: pointer;
+}
+
+.mini-select:hover {
+  border-color: var(--accent-color);
+}
+
+/* Fix for high-contrast dropdown options in dark mode */
+.mini-select option,
+select option {
+  background-color: #1a1d21;
+  color: white;
+  padding: 10px;
 }
 
 .naming-inputs {

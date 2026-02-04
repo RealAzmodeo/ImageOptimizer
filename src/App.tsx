@@ -14,8 +14,12 @@ function App() {
     resizeValue: 100,
     quality: 70, // Default optimal
     compressionLevel: 'optimal',
+    preserveStructure: true,
     unityReady: true,
     enforcePOT: false,
+    potSize: 'auto',
+    potMode: 'pad',
+    smartPadding: false,
     smartCrop: false,
     outputFormat: 'original',
     maskMode: false,
@@ -38,14 +42,28 @@ function App() {
     const items = e.dataTransfer.items
     const extracted = await getFilesFromItems(items)
 
-    const newFiles: ImageFile[] = extracted.map(item => ({
-      id: Math.random().toString(36).substr(2, 9),
-      file: item.file,
-      relativePath: item.relativePath,
-      originalSize: item.file.size,
-      status: 'pending',
-      previewUrl: URL.createObjectURL(item.file),
-      selected: true // Select by default
+    const newFiles: ImageFile[] = await Promise.all(extracted.map(async item => {
+      let width, height;
+      try {
+        const bmp = await createImageBitmap(item.file);
+        width = bmp.width;
+        height = bmp.height;
+        bmp.close();
+      } catch (e) {
+        console.warn('Could not get dimensions for', item.file.name);
+      }
+
+      return {
+        id: Math.random().toString(36).substr(2, 9),
+        file: item.file,
+        relativePath: item.relativePath,
+        originalSize: item.file.size,
+        status: 'pending',
+        previewUrl: URL.createObjectURL(item.file),
+        selected: true,
+        width,
+        height
+      };
     }))
 
     setFiles(prev => [...prev, ...newFiles])
@@ -76,7 +94,14 @@ function App() {
     const processedFiles = files.filter(f => f.status === 'done' && f.compressedBlob);
     processedFiles.forEach(f => {
       if (f.compressedBlob) {
-        const path = options.preserveStructure ? f.relativePath : f.file.name
+        const ext = options.outputFormat === 'webp' ? '.webp' : (f.file.type === 'image/png' ? '.png' : '.jpg');
+        const nameWithoutExt = f.file.name.replace(/\.[^/.]+$/, "");
+        const finalName = `${options.namePrefix}${nameWithoutExt}${options.nameSuffix}${ext}`;
+
+        const path = options.preserveStructure
+          ? f.relativePath.replace(f.file.name, finalName)
+          : finalName;
+
         zip.file(path, f.compressedBlob)
       }
     })
@@ -104,7 +129,12 @@ function App() {
       const url = URL.createObjectURL(file.compressedBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `optimized_${file.file.name}`;
+
+      const ext = options.outputFormat === 'webp' ? '.webp' : (file.file.type === 'image/png' ? '.png' : '.jpg');
+      const nameWithoutExt = file.file.name.replace(/\.[^/.]+$/, "");
+      const finalName = `${options.namePrefix}${nameWithoutExt}${options.nameSuffix}${ext}`;
+
+      a.download = finalName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -134,16 +164,31 @@ function App() {
             id="file-input"
             multiple
             style={{ display: 'none' }}
-            onChange={(e) => {
+            onChange={async (e) => {
               if (e.target.files) {
-                const newFiles: ImageFile[] = Array.from(e.target.files).map(file => ({
-                  id: Math.random().toString(36).substr(2, 9),
-                  file: file,
-                  relativePath: file.name,
-                  originalSize: file.size,
-                  status: 'pending',
-                  previewUrl: URL.createObjectURL(file),
-                  selected: true // Select by default
+                const filesList = Array.from(e.target.files);
+                const newFiles: ImageFile[] = await Promise.all(filesList.map(async file => {
+                  let width, height;
+                  try {
+                    const bmp = await createImageBitmap(file);
+                    width = bmp.width;
+                    height = bmp.height;
+                    bmp.close();
+                  } catch (e) {
+                    console.warn('Could not get dimensions for', file.name);
+                  }
+
+                  return {
+                    id: Math.random().toString(36).substr(2, 9),
+                    file: file,
+                    relativePath: file.name,
+                    originalSize: file.size,
+                    status: 'pending',
+                    previewUrl: URL.createObjectURL(file),
+                    selected: true,
+                    width,
+                    height
+                  };
                 }))
                 setFiles(prev => [...prev, ...newFiles])
               }
@@ -182,18 +227,6 @@ function App() {
                   className="toggle-switch"
                   checked={options.preserveStructure}
                   onChange={(e) => setOptions(prev => ({ ...prev, preserveStructure: e.target.checked }))}
-                />
-              </div>
-              <div className="setting-item">
-                <div className="setting-info">
-                  <span className="setting-title">Power of Two (POT)</span>
-                  <span className="setting-desc">Enforce POT dimensions for GPU</span>
-                </div>
-                <input
-                  type="checkbox"
-                  className="toggle-switch"
-                  checked={options.enforcePOT}
-                  onChange={(e) => setOptions(prev => ({ ...prev, enforcePOT: e.target.checked }))}
                 />
               </div>
             </div>
@@ -333,6 +366,165 @@ function App() {
           </div>
         </div>
 
+        <div className="experiments-panel glass-panel fade-in">
+          <div className="panel-header">
+            <div className="lab-icon">🧪</div>
+            <h2>Experimental Laboratory</h2>
+            <div className="badge experimental">BETA FEATURES</div>
+          </div>
+
+          <div className="experiments-grid">
+            {/* 1. Smart Crop */}
+            <div className="exp-item" title="Detects the actual content and removes transparency borders. Saves memory in Unity.">
+              <div className="exp-info">
+                <div className="title-row">
+                  <span className="exp-title">Smart Crop (Auto-Trim)</span>
+                  <div className="info-icon">i</div>
+                </div>
+                <span className="exp-desc">Remove empty transparent space from sprites</span>
+              </div>
+              <input
+                type="checkbox"
+                className="toggle-switch"
+                checked={options.smartCrop}
+                onChange={(e) => setOptions(prev => ({ ...prev, smartCrop: e.target.checked }))}
+              />
+            </div>
+
+            {/* 2. Mask Mode */}
+            <div className="exp-item" title="Converts to high-precision grayscale. Perfect for Roughness, Metallic, or Opacity maps.">
+              <div className="exp-info">
+                <div className="title-row">
+                  <span className="exp-title">Mask Mode (Grayscale)</span>
+                  <div className="info-icon">i</div>
+                </div>
+                <span className="exp-desc">Optimize for Unity mask maps (Roughness, etc.)</span>
+              </div>
+              <input
+                type="checkbox"
+                className="toggle-switch"
+                checked={options.maskMode}
+                onChange={(e) => setOptions(prev => ({ ...prev, maskMode: e.target.checked }))}
+              />
+            </div>
+
+            {/* 3. Smart Padding */}
+            <div className="exp-item" title="Repeats the last valid edge pixels to fill gaps instead of transparency. Fixes GPU filtering 'bleeding' lines.">
+              <div className="exp-info">
+                <div className="title-row">
+                  <span className="exp-title">Smart Padding (Dilatation)</span>
+                  <div className="info-icon">i</div>
+                </div>
+                <span className="exp-desc">Extrapolate edge pixels to fill empty margins</span>
+              </div>
+              <input
+                type="checkbox"
+                className="toggle-switch"
+                checked={options.smartPadding}
+                onChange={(e) => setOptions(prev => ({ ...prev, smartPadding: e.target.checked }))}
+              />
+            </div>
+
+            {/* 4. WebP Magic */}
+            <div className="exp-item" title="Converts images to Google's WebP format. Usually 30-50% smaller than PNG at same quality.">
+              <div className="exp-info">
+                <div className="title-row">
+                  <span className="exp-title">WebP Magic</span>
+                  <div className="info-icon">i</div>
+                </div>
+                <span className="exp-desc">Heavy compression export to .webp format</span>
+              </div>
+              <select
+                className="mini-select"
+                value={options.outputFormat}
+                onChange={(e) => setOptions(prev => ({ ...prev, outputFormat: e.target.value as any }))}
+              >
+                <option value="original">Keep Original (PNG/JPG)</option>
+                <option value="webp">Convert to WebP</option>
+              </select>
+            </div>
+
+            {/* 5. Advanced POT Control */}
+            <div className="exp-item full-width-exp">
+              <div className="exp-info">
+                <div className="title-row">
+                  <span className="exp-title">Advanced POT Controller</span>
+                  <div className="info-icon" title="Force images to specific Unity scale modes. Critical for GPU compression (ASTC/DXT).">i</div>
+                </div>
+                <div className="pot-lab-controls">
+                  <div className="pot-control-group">
+                    <span className="mini-label">Enable POT:</span>
+                    <input
+                      type="checkbox"
+                      className="toggle-switch"
+                      checked={options.enforcePOT}
+                      onChange={(e) => setOptions(prev => ({ ...prev, enforcePOT: e.target.checked }))}
+                    />
+                  </div>
+                  {options.enforcePOT && (
+                    <>
+                      <div className="pot-control-group">
+                        <span className="mini-label">Target Size:</span>
+                        <select
+                          className="mini-select"
+                          value={options.potSize}
+                          onChange={(e) => setOptions(prev => ({ ...prev, potSize: e.target.value as any }))}
+                        >
+                          <option value="auto">Auto (Nearest Power)</option>
+                          <option value="16">16x16</option>
+                          <option value="32">32x32</option>
+                          <option value="64">64x64</option>
+                          <option value="128">128x128</option>
+                          <option value="256">256x256</option>
+                          <option value="512">512x512</option>
+                          <option value="1024">1024x1024</option>
+                          <option value="2048">2048x2048</option>
+                          <option value="4096">4096x4096</option>
+                        </select>
+                      </div>
+                      <div className="pot-control-group">
+                        <span className="mini-label">Mode:</span>
+                        <select
+                          className="mini-select"
+                          value={options.potMode}
+                          onChange={(e) => setOptions(prev => ({ ...prev, potMode: e.target.value as any }))}
+                        >
+                          <option value="pad">Padding (Contain)</option>
+                          <option value="stretch">Stretching (Distort)</option>
+                          <option value="crop">Cropping (Cut edges)</option>
+                          <option value="fit">Force Scale (Resizing)</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 6. Batch Naming */}
+            <div className="exp-item naming full-width-exp">
+              <div className="exp-info">
+                <span className="exp-title">Batch Naming Rules</span>
+                <div className="naming-inputs">
+                  <input
+                    type="text"
+                    placeholder="Prefix (e.g. Opt_)"
+                    value={options.namePrefix}
+                    onChange={(e) => setOptions(prev => ({ ...prev, namePrefix: e.target.value }))}
+                  />
+                  <div className="filename-placeholder">filename</div>
+                  <input
+                    type="text"
+                    placeholder="Suffix (e.g. _low)"
+                    value={options.nameSuffix}
+                    onChange={(e) => setOptions(prev => ({ ...prev, nameSuffix: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {files.length > 0 && (
           <div className="file-list-container fade-in">
             {files.map((file) => (
@@ -351,7 +543,16 @@ function App() {
                 </div>
 
                 <div className="file-info" onClick={() => file.status === 'done' && setSelectedForComparison(file)}>
-                  <span className="file-name">{file.file.name}</span>
+                  <div className="file-name-row">
+                    <span className="file-name">{file.file.name}</span>
+                    {file.width && file.height && (
+                      (file.width & (file.width - 1)) !== 0 || (file.height & (file.height - 1)) !== 0
+                    ) && (
+                        <span className="pot-warning" title="Non-Power of Two texture (POT). Recommended to Enforce POT for Unity.">
+                          ⚠️
+                        </span>
+                      )}
+                  </div>
                   <div className="file-meta">
                     <span>{formatSize(file.originalSize)}</span>
                     {file.compressedSize && (
@@ -401,9 +602,6 @@ function App() {
                   optimizedUrl={URL.createObjectURL(selectedForComparison.compressedBlob)}
                 />
               )}
-              <div className="comparison-actions">
-                <button onClick={() => setSelectedForComparison(null)} className="close-btn">Close</button>
-              </div>
             </div>
           </div>
         </div>
@@ -413,7 +611,7 @@ function App() {
         <p className="text-secondary">© 2026 Unity Image Optimizer. For Artists, by Antigravity.</p>
       </footer>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

@@ -7,6 +7,9 @@ export interface OptimizationOptions {
     preserveStructure: boolean;
     unityReady: boolean;
     enforcePOT: boolean;
+    potSize: 'auto' | 16 | 32 | 64 | 128 | 256 | 512 | 1024 | 2048 | 4096;
+    potMode: 'pad' | 'stretch' | 'crop' | 'fit';
+    smartPadding: boolean;
     // Experimental Features
     smartCrop: boolean;
     outputFormat: 'original' | 'webp';
@@ -25,6 +28,8 @@ export interface ImageFile {
     previewUrl: string;
     compressedBlob?: Blob;
     selected: boolean; // For Include/Skip toggle
+    width?: number;   // For POT Auditor
+    height?: number;  // For POT Auditor
 }
 
 export const getFilesFromItems = async (items: DataTransferItemList) => {

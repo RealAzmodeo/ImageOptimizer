@@ -1,0 +1,9 @@
+@echo off
+echo Starting Unity Image Optimizer...
+if not exist node_modules (
+    echo node_modules not found. Installing dependencies...
+    call npm install
+)
+echo Launching development server...
+npm run dev
+pause

@@ -55,11 +55,14 @@ function App() {
 
     setIsProcessing(true);
 
-    // Mark selected as processing (resets done status for re-compression)
+    // Mark as processing in UI
     setFiles(prev => prev.map(f => f.selected ? { ...f, status: 'processing' } : f));
 
-    // Process only selected
-    await optimizationManager.current.processBatch(filesToCompress, options);
+    // Create a version of files with 'pending' status for the manager to accept them
+    const resetFiles = filesToCompress.map(f => ({ ...f, status: 'pending' as const }));
+
+    // Process
+    await optimizationManager.current.processBatch(resetFiles, options);
 
     setIsProcessing(false);
   };
@@ -195,10 +198,42 @@ function App() {
           <div className="dimension-panel glass-panel">
             <h2>Profile & Quality</h2>
             <div className="profile-selector">
-              <button className={`profile-btn ${options.profile === 'sprites' ? 'active' : ''}`} onClick={() => setOptions(prev => ({ ...prev, profile: 'sprites' }))}>Sprites</button>
-              <button className={`profile-btn ${options.profile === 'ui' ? 'active' : ''}`} onClick={() => setOptions(prev => ({ ...prev, profile: 'ui' }))}>UI</button>
-              <button className={`profile-btn ${options.profile === 'background' ? 'active' : ''}`} onClick={() => setOptions(prev => ({ ...prev, profile: 'background' }))}>BG</button>
-              <button className={`profile-btn extreme ${options.profile === 'extreme' ? 'active' : ''}`} onClick={() => setOptions(prev => ({ ...prev, profile: 'extreme' }))}>EXTREME</button>
+              <button
+                className={`profile-btn ${options.profile === 'sprites' ? 'active' : ''}`}
+                onClick={() => setOptions(prev => ({
+                  ...prev,
+                  profile: 'sprites',
+                  compressionLevel: 'optimal',
+                  quality: 70
+                }))}
+              >Sprites</button>
+              <button
+                className={`profile-btn ${options.profile === 'ui' ? 'active' : ''}`}
+                onClick={() => setOptions(prev => ({
+                  ...prev,
+                  profile: 'ui',
+                  compressionLevel: 'low',
+                  quality: 85
+                }))}
+              >UI</button>
+              <button
+                className={`profile-btn ${options.profile === 'background' ? 'active' : ''}`}
+                onClick={() => setOptions(prev => ({
+                  ...prev,
+                  profile: 'background',
+                  compressionLevel: 'high',
+                  quality: 50
+                }))}
+              >BG</button>
+              <button
+                className={`profile-btn extreme ${options.profile === 'extreme' ? 'active' : ''}`}
+                onClick={() => setOptions(prev => ({
+                  ...prev,
+                  profile: 'extreme',
+                  compressionLevel: 'very_high',
+                  quality: 30
+                }))}
+              >EXTREME</button>
             </div>
             <div className="dimension-controls-mini">
               <div className="control-group">

@@ -47,7 +47,8 @@ export class OptimizationManager {
     }
 
     async processBatch(files: ImageFile[], options: OptimizationOptions) {
-        const batch = files.filter(f => f.status !== 'done' && f.status !== 'processing');
+        // Only filter out what is actively processing, allow 'pending' (and 'done' if forcefully passed as pending)
+        const batch = files.filter(f => f.status !== 'processing');
 
         return Promise.all(batch.map(file => {
             return new Promise<void>((resolve) => {

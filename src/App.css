@@ -747,6 +747,33 @@
   border-color: var(--accent-color);
 }
 
+.mini-input {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: white;
+  padding: 0.4rem;
+  font-size: 0.85rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.mini-input:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(0, 112, 243, 0.2);
+}
+
+.nineslice-grid {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.slice-input-group label {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 /* Fix for high-contrast dropdown options in dark mode */
 .mini-select option,
 select option {

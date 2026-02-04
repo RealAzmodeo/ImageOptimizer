@@ -24,7 +24,9 @@ function App() {
     outputFormat: 'original',
     maskMode: false,
     namePrefix: '',
-    nameSuffix: ''
+    nameSuffix: '',
+    enableDithering: false,
+    spriteBorder: null
   })
   const [isProcessing, setIsProcessing] = useState(false)
   const [isLabExpanded, setIsLabExpanded] = useState(false)
@@ -63,7 +65,9 @@ function App() {
         previewUrl: URL.createObjectURL(item.file),
         selected: true,
         width,
-        height
+        height,
+        metaContent: item.metaContent,
+        hasMeta: !!item.metaContent
       };
     }))
 
@@ -103,7 +107,34 @@ function App() {
           ? f.relativePath.replace(f.file.name, finalName)
           : finalName;
 
-        zip.file(path, f.compressedBlob)
+        zip.file(path, f.compressedBlob);
+
+        // --- Phase 11: Unity .meta Sync ---
+        if (options.unityReady && (f.metaContent || options.spriteBorder)) {
+          let metaString = f.metaContent || `fileFormatVersion: 2\nguid: ${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}\nTextureImporter:\n  spriteBorder: {x: 0, y: 0, z: 0, w: 0}\n  textureType: 8\n`;
+
+          const scale = options.resizeValue / 100;
+
+          if (options.spriteBorder) {
+            // Override with Batch Editor values (scaled)
+            const b = options.spriteBorder;
+            const nb = {
+              l: Math.round(b.left * scale),
+              b: Math.round(b.bottom * scale),
+              r: Math.round(b.right * scale),
+              t: Math.round(b.top * scale)
+            };
+            metaString = metaString.replace(/spriteBorder: \{x:.*, y:.*, z:.*, w:.*\}/,
+              `spriteBorder: {x: ${nb.l}, y: ${nb.b}, z: ${nb.r}, w: ${nb.t}}`);
+          } else if (f.metaContent && scale !== 1.0) {
+            // Auto-scale existing borders if image was resized
+            metaString = metaString.replace(/spriteBorder: \{x: ([\d.]+), y: ([\d.]+), z: ([\d.]+), w: ([\d.]+)\}/, (_, x, y, z, w) => {
+              return `spriteBorder: {x: ${Math.round(parseFloat(x) * scale)}, y: ${Math.round(parseFloat(y) * scale)}, z: ${Math.round(parseFloat(z) * scale)}, w: ${Math.round(parseFloat(w) * scale)}}`;
+            });
+          }
+
+          zip.file(path + '.meta', metaString);
+        }
       }
     })
     const content = await zip.generateAsync({ type: 'blob' })
@@ -432,6 +463,22 @@ function App() {
                 />
               </div>
 
+              <div className="exp-item" title="Reduces color banding in optimized images using Floyd-Steinberg error diffusion.">
+                <div className="exp-info">
+                  <div className="title-row">
+                    <span className="exp-title">Advanced Dithering</span>
+                    <div className="info-icon">i</div>
+                  </div>
+                  <span className="exp-desc">Fixes color banding (FS)</span>
+                </div>
+                <input
+                  type="checkbox"
+                  className="toggle-switch"
+                  checked={options.enableDithering}
+                  onChange={(e) => setOptions(prev => ({ ...prev, enableDithering: e.target.checked }))}
+                />
+              </div>
+
               {/* Row 2: Settings (2 Columns) */}
               <div className="exp-item" title="Converts images to Google's WebP format. Usually 30-50% smaller than PNG at same quality.">
                 <div className="exp-info">
@@ -525,6 +572,56 @@ function App() {
                         </div>
                       </>
                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 4: Unity Advanced (9-Slice) */}
+              <div className="exp-item full-width" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', marginTop: '1rem' }}>
+                <div className="exp-info">
+                  <div className="title-row">
+                    <span className="exp-title">Unity Batch 9-Slice Editor</span>
+                    <div className="badge secondary">UNITY EXCLUSIVE</div>
+                  </div>
+                  <span className="exp-desc">Configure Sprite Borders (L, B, R, T) for meta generation.</span>
+
+                  <div className="nineslice-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '1rem' }}>
+                    {['Left', 'Bottom', 'Right', 'Top'].map((side) => (
+                      <div key={side} className="slice-input-group">
+                        <label style={{ fontSize: '0.8rem', opacity: 0.7, display: 'block', marginBottom: '0.3rem' }}>{side}</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          className="mini-input"
+                          style={{ width: '100%' }}
+                          value={options.spriteBorder?.[side.toLowerCase() as keyof typeof options.spriteBorder] || ''}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            setOptions(prev => ({
+                              ...prev,
+                              spriteBorder: {
+                                ...(prev.spriteBorder || { left: 0, bottom: 0, right: 0, top: 0 }),
+                                [side.toLowerCase()]: val
+                              }
+                            }))
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      className="btn secondary small"
+                      onClick={() => setOptions(prev => ({ ...prev, spriteBorder: null }))}
+                      disabled={!options.spriteBorder}
+                    >
+                      Clear Borders
+                    </button>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.5, fontStyle: 'italic', alignSelf: 'center' }}>
+                      Borders will scale automatically if images are resized.
+                    </div>
                   </div>
                 </div>
               </div>

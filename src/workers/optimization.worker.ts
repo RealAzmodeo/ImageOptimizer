@@ -36,6 +36,14 @@ function applyAlphaBleed(data: Uint8ClampedArray, width: number, height: number)
     return result;
 }
 
+function distributeError(data: Uint8ClampedArray, x: number, y: number, w: number, h: number, errR: number, errG: number, errB: number, factor: number) {
+    if (x < 0 || x >= w || y < 0 || y >= h) return;
+    const i = (y * w + x) * 4;
+    data[i] = Math.max(0, Math.min(255, data[i] + errR * factor));
+    data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + errG * factor));
+    data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + errB * factor));
+}
+
 self.onmessage = async (e: MessageEvent) => {
     const { id, file, options } = e.data;
     log(`Starting ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
@@ -105,17 +113,35 @@ self.onmessage = async (e: MessageEvent) => {
             coreCtx.putImageData(idata, 0, 0);
         }
 
-        // Filter B: Posterization (Color Reduction)
         if (file.type === 'image/png' && options?.quality && options.quality < 100) {
-            log(`Posterizing core at ${options.quality}%...`);
+            log(`Posterizing core at ${options.quality}% (Dithering: ${options.enableDithering})...`);
             const idata = coreCtx.getImageData(0, 0, coreW, coreH);
             const d = idata.data;
             const levels = Math.max(2, Math.floor((options.quality / 100) * 32));
             const step = 255 / (levels - 1);
-            for (let i = 0; i < d.length; i += 4) {
-                d[i] = Math.round(Math.round(d[i] / step) * step);
-                d[i + 1] = Math.round(Math.round(d[i + 1] / step) * step);
-                d[i + 2] = Math.round(Math.round(d[i + 2] / step) * step);
+
+            if (options?.enableDithering) {
+                for (let y = 0; y < coreH; y++) {
+                    for (let x = 0; x < coreW; x++) {
+                        const i = (y * coreW + x) * 4;
+                        const r = d[i], g = d[i + 1], b = d[i + 2];
+                        const nr = Math.round(Math.round(r / step) * step);
+                        const ng = Math.round(Math.round(g / step) * step);
+                        const nb = Math.round(Math.round(b / step) * step);
+                        d[i] = nr; d[i + 1] = ng; d[i + 2] = nb;
+                        const er = r - nr, eg = g - ng, eb = b - nb;
+                        distributeError(d, x + 1, y, coreW, coreH, er, eg, eb, 7 / 16);
+                        distributeError(d, x - 1, y + 1, coreW, coreH, er, eg, eb, 3 / 16);
+                        distributeError(d, x, y + 1, coreW, coreH, er, eg, eb, 5 / 16);
+                        distributeError(d, x + 1, y + 1, coreW, coreH, er, eg, eb, 1 / 16);
+                    }
+                }
+            } else {
+                for (let i = 0; i < d.length; i += 4) {
+                    d[i] = Math.round(Math.round(d[i] / step) * step);
+                    d[i + 1] = Math.round(Math.round(d[i + 1] / step) * step);
+                    d[i + 2] = Math.round(Math.round(d[i + 2] / step) * step);
+                }
             }
             coreCtx.putImageData(idata, 0, 0);
         }

@@ -16,6 +16,9 @@ export interface OptimizationOptions {
     maskMode: boolean;
     namePrefix: string;
     nameSuffix: string;
+    // Unity specific
+    enableDithering: boolean;
+    spriteBorder: { left: number; bottom: number; right: number; top: number } | null;
 }
 
 export interface ImageFile {
@@ -30,6 +33,9 @@ export interface ImageFile {
     selected: boolean; // For Include/Skip toggle
     width?: number;   // For POT Auditor
     height?: number;  // For POT Auditor
+    // Unity Metadata
+    metaContent?: string;
+    hasMeta?: boolean;
 }
 
 export const getFilesFromItems = async (items: DataTransferItemList) => {
@@ -60,7 +66,31 @@ export const getFilesFromItems = async (items: DataTransferItemList) => {
         }
     }
     await Promise.all(traversePromises);
-    return files;
+
+    // Pairing logic: Connect .meta files to their images
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
+    const pairedFiles: { file: File; relativePath: string; metaContent?: string }[] = [];
+    const metaMap = new Map<string, string>();
+
+    // First pass: collect all .meta content
+    for (const item of files) {
+        if (item.file.name.endsWith('.meta')) {
+            const content = await item.file.text();
+            metaMap.set(item.relativePath, content);
+        }
+    }
+
+    // Second pass: pair images with their metas
+    for (const item of files) {
+        const ext = item.file.name.substring(item.file.name.lastIndexOf('.')).toLowerCase();
+        if (imageExtensions.includes(ext)) {
+            const possibleMetaPath = item.relativePath + '.meta';
+            const metaContent = metaMap.get(possibleMetaPath);
+            pairedFiles.push({ ...item, metaContent });
+        }
+    }
+
+    return pairedFiles;
 };
 
 export const getNextPOT = (value: number) => {
